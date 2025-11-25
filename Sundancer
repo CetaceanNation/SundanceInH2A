@@ -135,93 +135,107 @@ def image3_decrypt(src: Path, dest: Path, iv: str, key: str, keep_cont: bool = F
         args += ["-decrypt"]
 
     _run(
-        SCRIPT_ROOT / "executables" / "xpwntool",
-        args)
+        EXECUTABLES["xpwntool"],
+        args
+    )
 
     debug("decrypted Image3 at %s to %s" % (src.name, dest.name))
 
 def image3_create(src: Path, dest: Path, template: Path):
     _run(
-        SCRIPT_ROOT / "executables" / "xpwntool",
-        [str(src), str(dest), "-t", str(template)])
+        EXECUTABLES["xpwntool"],
+        [str(src), str(dest), "-t", str(template)]
+    )
 
     debug("created Image3 at %s from %s with template %s" % (dest.name, src.name, template.name))
 
 def dmg_extract(src: Path, dest: Path, key: str):
     _run(
-        SCRIPT_ROOT / "executables" / "dmg",
-        ["extract", str(src), str(dest), "-k", key])
+        EXECUTABLES["dmg"],
+        ["extract", str(src), str(dest), "-k", key]
+    )
 
     debug("decrypted DMG at %s to %s" % (src.name, dest.name))
 
 def dmg_build(src: Path, dest: Path):
     _run(
-        SCRIPT_ROOT / "executables" / "dmg",
-        ["build", str(src), str(dest)])
+        EXECUTABLES["dmg"],
+        ["build", str(src), str(dest)]
+    )
 
     debug("built DMG at %s to %s" % (src.name, dest.name))
 
 def hfsplus_grow(dmg: Path, size: int):
     _run(
-        SCRIPT_ROOT / "executables" / "hfsplus",
-        [str(dmg), "grow", str(size)])
+        EXECUTABLES["hfsplus"],
+        [str(dmg), "grow", str(size)]
+    )
 
     debug("grown HFS+ image at %s to %d bytes" % (dmg.name, size))
 
 def hfsplus_extract(dmg: Path, src: str, dest: Path):
     _run(
-        SCRIPT_ROOT / "executables" / "hfsplus",
-        [str(dmg), "extract", src, str(dest)])
+        EXECUTABLES["hfsplus"],
+        [str(dmg), "extract", src, str(dest)]
+    )
 
     debug("extracted %s to %s from HFS+ image at %s" % (src, dest.name, dmg.name))
 
 def hfsplus_replace(dmg: Path, src: Path, dest: str, uid: int = 0, gid: int = 0, mode: int = 0o644):
     _run(
-        SCRIPT_ROOT / "executables" / "hfsplus",
-        [str(dmg), "rm", dest])
+        EXECUTABLES["hfsplus"],
+        [str(dmg), "rm", dest]
+    )
 
     hfsplus_add(dmg, src, dest, uid, gid, mode)
 
 def hfsplus_add(dmg: Path, src: Path, dest: str, uid: int = 0, gid: int = 0, mode: int = 0o644):
     _run(
-        SCRIPT_ROOT / "executables" / "hfsplus",
-        [str(dmg), "add", str(src), dest])
+        EXECUTABLES["hfsplus"],
+        [str(dmg), "add", str(src), dest]
+    )
 
     _run(
-        SCRIPT_ROOT / "executables" / "hfsplus",
-        [str(dmg), "chown", "%d:%d" % (uid, gid), dest])
+        EXECUTABLES["hfsplus"],
+        [str(dmg), "chown", "%d:%d" % (uid, gid), dest]
+    )
 
     _run(
-        SCRIPT_ROOT / "executables" / "hfsplus",
-        [str(dmg), "chmod", "%o" % (mode), dest])
+        EXECUTABLES["hfsplus"],
+        [str(dmg), "chmod", "%o" % (mode), dest]
+    )
 
     debug("added %s in HFS+ image at %s to %s" % (src.name, dmg.name, dest))
 
 def hfsplus_rm(dmg: Path, path: str):
     _run(
-        SCRIPT_ROOT / "executables" / "hfsplus",
-        [str(dmg), "rm", path])
+        EXECUTABLES["hfsplus"],
+        [str(dmg), "rm", path]
+    )
 
     debug("removed %s from HFS+ image at %s" % (path, dmg.name))
 
 def hfsplus_rmdir(dmg: Path, dir: str):
     _run(
-        SCRIPT_ROOT / "executables" / "hfsplus",
-        [str(dmg), "rmall", dir])
+        EXECUTABLES["hfsplus"],
+        [str(dmg), "rmall", dir]
+    )
 
     debug("removed %s folder from HFS+ image at %s" % (dir, dmg.name))
 
 def hfsplus_mv(dmg: Path, src: str, dest: str):
     _run(
-        SCRIPT_ROOT / "executables" / "hfsplus",
-        [str(dmg), "mv", src, dest])
+        EXECUTABLES["hfsplus"],
+        [str(dmg), "mv", src, dest]
+    )
 
     debug("moved %s to %s in HFS+ image at %s" % (src, dest, dmg.name))
 
 def hfsplus_untar(dmg: Path, tar: Path, dest: str):
     _run(
-        SCRIPT_ROOT / "executables" / "hfsplus",
-        [str(dmg), "untar", str(tar), dest])
+        EXECUTABLES["hfsplus"],
+        [str(dmg), "untar", str(tar), dest]
+    )
 
     debug("untar'd %s to %s in HFS+ image at %s" % (tar.name, dest, dmg.name))
 
@@ -716,6 +730,11 @@ def process(args):
             args.output
         )
 
+def find_execs(exec_names):
+    for exec_bin in exec_names:
+        sys_path = shutil.which(exec_bin)
+        EXECUTABLES[exec_bin] = Path(sys_path) if sys_path else EXECUTABLES_ROOT / exec_bin
+
 def _load_config(original_ipsw: IPSW, destination_ipsw: IPSW) -> Tuple[Config, BuildIdentity, BuildIdentity]:
     # Big O is watching me!
     matches = []
@@ -751,11 +770,13 @@ def _load_config(original_ipsw: IPSW, destination_ipsw: IPSW) -> Tuple[Config, B
     return matches.pop()
 
 SCRIPT_ROOT = Path(__file__).parent
+EXECUTABLES_ROOT = SCRIPT_ROOT / "executables"
 RESOURCES_ROOT = SCRIPT_ROOT / "resources"
 ARTIFACTS_ROOT = SCRIPT_ROOT / "artifacts"
 CONFIGS_ROOT = SCRIPT_ROOT / "configs"
 
 gCfg = None
+EXECUTABLES = {}
 
 def main():
     parser = argparse.ArgumentParser(description="convert iPod touch 3 iOS 5.1.1 IPSW to iOS 6.x")
@@ -793,6 +814,7 @@ def main():
         print("destination IPSW does NOT exist")
         exit(-1)
 
+    find_execs(["dmg", "hfsplus", "xpwntool"])
     process(args)
 
     log("DONE!")
